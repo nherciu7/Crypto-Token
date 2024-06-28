@@ -1,85 +1,84 @@
-# Check your Balance
+![image](https://github.com/nherciu7/Crypto-Token/assets/170099479/f0ed1a97-4e9f-46c2-8c0b-3fe41ed8b6e4)
 
-1. Find out your principal id:
+![image](https://github.com/nherciu7/Crypto-Token/assets/170099479/a355a641-2902-4b24-bff6-eff502a1ae04)
 
-```
-dfx identity get-principal
-```
+# Token Project
 
-2. Save it somewhere.
+This project implements a simple token contract in Motoko.
 
-e.g. My principal id is: lnc5u-bwybm-r5d56-dut5f-cuvhw-elmff-crjnq-3cu6p-jb2fo-xghum-4ae
+## Overview
 
+The `Token` actor defines a basic token with the following features:
 
-3. Format and store it in a command line variable:
-```
-OWNER_PUBLIC_KEY="principal \"$( \dfx identity get-principal )\""
-```
+- Total supply of 1,000,000,000 tokens
+- Balance tracking
+- Basic transfer functionality
+- Initial distribution of tokens to the contract owner
+- Claiming mechanism for new users
 
-4. Check that step 3 worked by printing it out:
-```
-echo $OWNER_PUBLIC_KEY
-```
+## Dependencies
 
-5. Check the owner's balance:
-```
-dfx canister call token balanceOf "( $OWNER_PUBLIC_KEY )"
-```
+The project imports the following modules from the Motoko base library:
 
-# Charge the Canister
+- `Principal`
+- `HashMap`
+- `Debug`
+- `Nat`
+- `Iter`
 
+## Actor Implementation
 
-1. Check canister ID:
-```
-dfx canister id token
-```
+### State Variables
 
-2. Save canister ID into a command line variable:
-```
-CANISTER_PUBLIC_KEY="principal \"$( \dfx canister id token )\""
-```
+- `owner`: The initial owner of all tokens.
+- `totalSupply`: The total supply of the tokens.
+- `symbol`: The symbol of the token.
+- `balanceEntries`: A stable variable to store balance entries for upgrade purposes.
+- `balances`: A hash map to store the balances of each principal.
 
-3. Check canister ID has been successfully saved:
-```
-echo $CANISTER_PUBLIC_KEY
-```
+### Methods
 
-4. Transfer half a billion tokens to the canister Principal ID:
-```
-dfx canister call token transfer "($CANISTER_PUBLIC_KEY, 500_000_000)"
-```
+#### `balanceOf(who: Principal): async Nat`
 
-# Deploy the Project to the Live IC Network
+Returns the balance of the specified principal.
 
-1. Create and deploy canisters:
+#### `getSymbol(): async Text`
 
-```
-dfx deploy --network ic
-```
+Returns the symbol of the token.
 
-2. Check the live canister ID:
-```
-dfx canister --network ic id token
-```
+#### `payOut(): async Text`
 
-3. Save the live canister ID to a command line variable:
-```
-LIVE_CANISTER_KEY="principal \"$( \dfx canister --network ic id token )\""
-```
+Allows a caller to claim tokens if they haven't done so before. They receive 10,000 tokens upon claiming.
 
-4. Check that it worked:
-```
-echo $LIVE_CANISTER_KEY
-```
+#### `transfer(to: Principal, amount: Nat): async Text`
 
-5. Transfer some tokens to the live canister:
-```
-dfx canister --network ic call token transfer "($LIVE_CANISTER_KEY, 50_000_000)"
-```
+Transfers the specified amount of tokens from the caller to the specified principal. Returns "Success" if the transfer is successful and "Insufficient Funds" if the caller does not have enough tokens.
 
-6. Get live canister front-end id:
-```
-dfx canister --network ic id token_assets
-```
-7. Copy the id from step 6 and add .raw.ic0.app to the end to form a URL.
-e.g. zdv65-7qaaa-aaaai-qibdq-cai.raw.ic0.app
+### System Methods
+
+#### `preupgrade()`
+
+Prepares the contract for an upgrade by saving the current state of balances.
+
+#### `postupgrade()`
+
+Restores the state of balances after an upgrade.
+
+## Usage
+
+1. **Initialize the Contract**: Upon deployment, the contract initializes the balances with the owner holding all tokens.
+2. **Check Balance**: Use `balanceOf` to check the balance of any principal.
+3. **Transfer Tokens**: Use `transfer` to send tokens to another principal.
+4. **Claim Tokens**: Use `payOut` to claim tokens if you are a new user.
+
+## Example
+
+```motoko
+import Principal "mo:base/Principal";
+
+let owner = Principal.fromText("lnc5u-bwybm-r5d56-dut5f-cuvhw-elmff-crjnq-3cu6p-jb2fo-xghum-4ae");
+let token = Token();
+token.getSymbol(); // "THEO"
+token.balanceOf(owner); // 1000000000
+token.payOut(); // "Succes" or "Already Claimed"
+token.transfer(someOtherPrincipal, 500); // "Success" or "Insufficient Funds"
